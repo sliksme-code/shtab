@@ -1,14 +1,13 @@
 # Штаб — стратегический офис
 
 Веб-приложение для планирования Sellerator, агентства ITIS, курсов и личных целей.
-Фронтенд: Vite + JS. Данные и вход: Supabase (проект ITIS marketing, таблицы `shtab_*`).
+Фронтенд: Vite + JS. Данные и вход: Supabase (проект Sellerator, таблицы `shtab_*`).
 
 ## Первый запуск
 
 1. **Supabase → SQL Editor**: выполнить `supabase/001_init.sql` (таблицы, доступы, realtime), затем файл переноса данных `002_data.sql` (его нет в репозитории: в нём личные данные, он передаётся отдельно).
-2. **Supabase → Authentication → URL Configuration**:
-   - Site URL: `https://sellerator.site`
-   - Redirect URLs: `https://sellerator.site/**` и временный адрес Timeweb `https://*.twc1.net/**`
+2. **Supabase → Authentication → URL Configuration** (проект общий с продуктом Sellerator — Site URL НЕ менять):
+   - Redirect URLs: добавить `https://sellerator.site/**` и временный адрес Timeweb `https://*.twc1.net/**`
 3. **Timeweb Cloud → App Platform → Создать → Frontend**:
    - репозиторий из GitHub, ветка `main`, автодеплой — включён;
    - фреймворк: Vite (или «Другой»), команда сборки `npm run build`, директория сборки `dist`;
