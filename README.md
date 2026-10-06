@@ -7,13 +7,13 @@
 
 1. **Supabase → SQL Editor**: выполнить `supabase/001_init.sql` (таблицы, доступы, realtime), затем файл переноса данных `002_data.sql` (его нет в репозитории: в нём личные данные, он передаётся отдельно).
 2. **Supabase → Authentication → URL Configuration**:
-   - Site URL: `https://shtab.itis.marketing`
-   - Redirect URLs: `https://shtab.itis.marketing/**` и временный адрес Timeweb `https://*.twc1.net/**`
+   - Site URL: `https://sellerator.site`
+   - Redirect URLs: `https://sellerator.site/**` и временный адрес Timeweb `https://*.twc1.net/**`
 3. **Timeweb Cloud → App Platform → Создать → Frontend**:
    - репозиторий из GitHub, ветка `main`, автодеплой — включён;
    - фреймворк: Vite (или «Другой»), команда сборки `npm run build`, директория сборки `dist`;
    - переменные окружения: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (значения — в `.env.example` и в чате).
-4. Привязать домен `shtab.itis.marketing`, включить SSL.
+4. Привязать домен `sellerator.site`, включить SSL.
 
 ## Доступ
 
