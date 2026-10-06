@@ -150,9 +150,9 @@ async function boot(){
 
 // ---------- рендер ----------
 let pending = false;
-function render(){
+function render(force){
   const a = document.activeElement;
-  if(a && document.getElementById('main').contains(a) && a.matches('input,textarea,select')){ pending=true; return }
+  if(!force && a && document.getElementById('main').contains(a) && a.matches('input,textarea,select') && !a.closest('form.quickadd')){ pending=true; return }
   pending=false;
   document.getElementById('nav').innerHTML = ROUTES.map(([k,n],i)=>
     (k==='sellerator'?'<div class="navsep">Направления</div>':'')+(k==='life'?'<div class="navsep">Жизнь</div>':'')+(k==='sources'?'<div class="navsep">Система</div>':'')+
@@ -241,7 +241,7 @@ function vOverview(){
 
    <section class="sec">
     <div class="sec-h"><h2>Эта неделя · ${plabel('week',today())}</h2>
-      <div class="row"><span class="sub num">${done} из ${tasks.length} сделано</span><a class="btn" href="#plan" data-act="gotoWeek">Открыть планирование</a></div></div>
+      <div class="row"><span class="sub num">${done} из ${tasks.length} сделано</span><button class="btn primary" data-act="addTask" data-hz="week" data-date="${wk}">Новая задача</button><a class="btn" href="#plan" data-act="gotoWeek">Открыть планирование</a></div></div>
     ${tasks.length?`<div class="list">${tasks.map(taskRow).join('')}</div>`:emptyBox('На эту неделю задач нет. Добавьте 3–5 приоритетов, привязанных к целям квартала.','addTask',{hz:'week',date:wk})}
    </section>
 
@@ -259,6 +259,17 @@ function emptyBox(text, act, data){
 const byPrio = (a,b) => (a.done?1:0)-(b.done?1:0) || (Number(a.prio)||9)-(Number(b.prio)||9) || (a.title||'').localeCompare(b.title||'');
 const byOwner = (a,b) => (OWNERS.indexOf(a.owner)+99*(OWNERS.indexOf(a.owner)<0)) - (OWNERS.indexOf(b.owner)+99*(OWNERS.indexOf(b.owner)<0)) || (a.title||'').localeCompare(b.title||'');
 
+function quickAdd(hz, date, dir){
+  const d = dir && dir!=='all' ? dir : 'sellerator';
+  return `<form class="quickadd" data-hz="${hz}" data-date="${date}" data-dir="${d}">
+    <input name="title" placeholder="${hz==='day'?'Задача на день':'Новая задача на неделю'} — напишите и нажмите Enter" aria-label="Новая задача" required>
+    <select name="owner" aria-label="Исполнитель">${OWNERS.map(o=>`<option ${o===(hz==='day'&&UI.dayOwner&&UI.dayOwner!=='all'?UI.dayOwner:'Марат')?'selected':''}>${o}</option>`).join('')}</select>
+    <select name="cat" aria-label="Раздел">${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+    <select name="prio" aria-label="Приоритет"><option value="1">P1</option><option value="2" selected>P2</option><option value="3">P3</option></select>
+    <input name="est" inputmode="decimal" placeholder="ч" aria-label="Оценка, часов" class="qa-est">
+    <button class="btn primary" type="submit">Добавить</button>
+  </form>`;
+}
 function taskRow(t){
   return `<div class="item ${t.done?'done':''}">
     <input type="checkbox" ${t.done?'checked':''} data-act="toggleTask" data-id="${t.id}" aria-label="Сделано">
@@ -333,7 +344,7 @@ function vPlan(){
     const wg = S.goals.filter(g=>g.horizon==='week' && g.period===key && inDir(g));
     body = `<div class="sec"><div class="sec-h"><h3>Цели недели в цифрах</h3><button class="btn" data-act="addGoal" data-hz="week" data-period="${key}">Добавить цель недели</button></div>
       ${wg.length?goalsBlock(wg):'<div class="sub">Задайте 3–6 чисел на неделю: заявки, встречи, договоры, оплаты. Цели с источником «из метрик недели» заполняются сами.</div>'}</div>
-      <div class="row" style="justify-content:space-between"><div class="row"><h3>Задачи недели</h3><button class="btn" data-act="tgWeek" data-week="${key}" data-dir="${dirF}">Скопировать для Telegram</button><button class="btn ghost" data-act="tgWeekView" data-week="${key}" data-dir="${dirF}">Посмотреть текст</button></div><div class="seg" role="group" aria-label="Группировка"><button data-act="group" data-v="cat" aria-pressed="${UI.group!=='owner'}">По разделам</button><button data-act="group" data-v="owner" aria-pressed="${UI.group==='owner'}">По людям</button></div></div>`;
+      <div class="row" style="justify-content:space-between"><div class="row"><h3>Задачи недели</h3><button class="btn" data-act="tgWeek" data-week="${key}" data-dir="${dirF}">Скопировать для Telegram</button><button class="btn ghost" data-act="tgWeekView" data-week="${key}" data-dir="${dirF}">Посмотреть текст</button></div><div class="seg" role="group" aria-label="Группировка"><button data-act="group" data-v="cat" aria-pressed="${UI.group!=='owner'}">По разделам</button><button data-act="group" data-v="owner" aria-pressed="${UI.group==='owner'}">По людям</button></div></div>` + quickAdd('week', key, dirF);
     body += ts.length ? groups.map(o=>{ const l=ts.filter(t=>gk(t)===o); const eh=l.reduce((a,t)=>a+estOf(t),0), wh=teamHours()[o];
       const hInfo = UI.group==='owner' && isNum(wh) ? ` · оценка ${hrs(eh)} из ${hrs(wh)}${eh>wh?' <span class="pill bad">перегруз</span>':''}` : '';
       return `<div class="sec"><div class="sec-h"><h3>${esc(o)}</h3><span class="sub num">${l.filter(t=>t.done).length}/${l.length}${hInfo}</span></div><div class="list">${l.map(taskRow).join('')}</div></div>`}).join('')
@@ -368,7 +379,7 @@ function vPlan(){
       ${over?`<div class="warnbox" style="margin-top:10px;border-color:var(--bad)">План дня больше бюджета на ${hrs(total-budget)}. Уберите P2–P3 или перенесите их на завтра.</div>`:''}
     </div>
     <div class="grid g2">
-      <div class="sec"><div class="sec-h"><h3>План дня</h3><button class="btn" data-act="addTask" data-hz="day" data-date="${key}">Новая задача</button></div>
+      <div class="sec"><div class="sec-h"><h3>План дня</h3><button class="btn" data-act="addTask" data-hz="day" data-date="${key}">Подробно…</button></div>${quickAdd('day', key, dirF)}
         ${inDay.length?`<div class="list">${inDay.map(t=>dayRow(t,key,true,left)).join('')}</div>`:'<div class="empty">Пока пусто. Добавьте 1–3 задачи из недельного плана справа — начните с P1.</div>'}</div>
       <div class="sec"><div class="sec-h"><h3>Из недельного плана</h3><span class="sub">${plabel('week',d)} · открыто ${pool.length}</span></div>
         ${pool.length?`<div class="list">${pool.map(t=>dayRow(t,key,false,left)).join('')}</div>`:'<div class="sub">Открытых задач недели нет.</div>'}</div>
@@ -532,6 +543,7 @@ function weekPanel(k){
      ${w?`<div class="row sub num" style="gap:6px 16px">Воронка: <span>заявки ${num(w.leads)}</span><span>встречи ${num(w.meetings)}</span><span>сделки ${num(w.deals)}${isNum(w.dealsPlan)?' из '+num(w.dealsPlan):''}</span><span>новая выручка ${rubS(w.newRev)}</span>${isNum(w.adCost)?`<span>реклама ${rubS(w.adCost)}${w.leads>0?' · заявка '+rub(w.adCost/w.leads):''}</span>`:''}</div>`:'<div class="sub">Метрики воронки за неделю не внесены — авто-цели пока без факта.</div>'}
     </div>
     <div class="sec" style="gap:8px"><div class="mline"><h3>Задачи недели</h3><span class="sub num">${done} из ${ts.length} · ${ts.length?Math.round(done/ts.length*100):0}%</span></div>
+     ${quickAdd('week', key, k)}
      ${ts.length?`<div class="tablewrap"><table><thead><tr><th>Раздел</th><th class="n">Сделано</th><th class="n">P1</th><th style="width:30%"></th></tr></thead><tbody>
       ${cats.map(c=>{ const l=ts.filter(t=>(t.cat||'Без категории')===c), d1=l.filter(t=>t.done).length, p=l.filter(t=>t.prio==1);
         return `<tr><td>${esc(c)}</td><td class="n">${d1}/${l.length}</td><td class="n">${p.length?p.filter(t=>t.done).length+'/'+p.length:'—'}</td><td>${bar(d1/l.length,k)}</td></tr>` }).join('')}
@@ -1107,6 +1119,21 @@ document.addEventListener('click', e=>{
   const fn = ACT[a.dataset.act]; if(!fn) return;
   if(a.tagName!=='A' && a.type!=='checkbox') e.preventDefault();
   fn(a.dataset, e);
+});
+document.addEventListener('submit', async e=>{
+  const f = e.target.closest && e.target.closest('form.quickadd'); if(!f) return;
+  e.preventDefault();
+  const title = f.elements.title.value.trim(); if(!title) return;
+  const estRaw = f.elements.est.value.trim().replace(',','.');
+  const est = estRaw==='' ? null : Number(estRaw);
+  if(est!==null && (!isFinite(est) || est<0)){ toast('Оценка — число часов, например 1,5'); return }
+  const hz = f.dataset.hz;
+  const t = clean({title, owner:f.elements.owner.value, cat:f.elements.cat.value, prio:f.elements.prio.value, est,
+    dir:f.dataset.dir, horizon:hz, date:f.dataset.date, done:false});
+  const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+  const ok = await put('tasks/'+newId(), t);
+  btn.disabled = false;
+  if(ok){ toast('Задача добавлена'); render(true); const inp = document.querySelector(`form.quickadd[data-hz="${hz}"][data-date="${f.dataset.date}"] input[name=title]`); if(inp){ inp.value=''; inp.focus() } }
 });
 document.addEventListener('change', async e=>{
   const el = e.target;

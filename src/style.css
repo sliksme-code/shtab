@@ -190,3 +190,12 @@ td{border-bottom:1px solid var(--line)}
 a.btn{color:var(--ink);text-decoration:none}
 a.btn.primary{color:#fff}
 .north .card a.btn,.north .card .btn{color:#fff}
+.quickadd{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--bg);border-radius:var(--r);padding:8px}
+.quickadd input[name=title]{flex:1 1 260px;min-width:0;border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 10px;background:var(--surface)}
+.quickadd select,.quickadd .qa-est{border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 6px;background:var(--surface)}
+.quickadd .qa-est{width:56px;text-align:right}
+.fab{position:fixed;right:calc(20px + env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:9;border:0;border-radius:500px;background:var(--accent);color:#fff;font:inherit;font-weight:800;padding:14px 20px;box-shadow:var(--shadow-pill),0 6px 20px rgba(255,95,67,.35);cursor:pointer}
+.fab:hover{background:var(--accent-deep)}
+.f input[type=checkbox]{width:auto;margin:0}
+.f label:has(input[type=checkbox]){display:flex;gap:8px;align-items:center;color:var(--ink);font-size:14px;margin-top:22px}
+main{padding-bottom:110px}
