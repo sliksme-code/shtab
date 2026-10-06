@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { createDb } from './db.js';
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Публичные значения проекта Supabase (anon-ключ предназначен для браузера; данные защищены RLS).
+// Переменные окружения, если заданы, имеют приоритет.
+const DEFAULT_URL = 'https://qaicsqriuoznwoynfdgs.supabase.co';
+const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhaWNzcXJpdW96bndveW5mZGdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2Mzg5MzQsImV4cCI6MjA3OTIxNDkzNH0.3llSpX7XKAmG3hEgpDyyAAEaGAmkm8jtUoHEZPnVcf4';
+const env = import.meta.env;
+const url = env.VITE_SUPABASE_URL || DEFAULT_URL;
+const key = env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_ANON_KE || env.VITE_SUPABASE_KEY || DEFAULT_KEY;
 const sb = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
 const $ = id => document.getElementById(id);
