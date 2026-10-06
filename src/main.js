@@ -13,28 +13,99 @@ const sb = createClient(url, key, { auth: { persistSession: true, autoRefreshTok
 const $ = id => document.getElementById(id);
 let started = false;
 
-function showLogin(msg) {
+// ---- Авторизация: вход / регистрация / восстановление пароля ----
+let mode = 'in'; // in | up | forgot | newpw
+const TXT = { in: 'Войти', up: 'Зарегистрироваться', forgot: 'Отправить ссылку для сброса', newpw: 'Сохранить новый пароль' };
+const FIELDS = { in: ['email', 'password'], up: ['name', 'email', 'password', 'password2'], forgot: ['email'], newpw: ['password', 'password2'] };
+
+function msg(text, isErr) {
+  const el = $('loginMsg');
+  el.textContent = text || '';
+  el.classList.toggle('err', !!isErr);
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.authfld').forEach(f => { f.hidden = !FIELDS[m].includes(f.dataset.for); });
+  document.querySelectorAll('.authtab').forEach(t => t.classList.toggle('on', t.dataset.mode === m));
+  document.querySelector('.authtabs').hidden = m === 'newpw';
+  $('authSubmit').textContent = TXT[m];
+  $('forgotBtn').textContent = m === 'forgot' ? '← Назад ко входу' : 'Забыли пароль?';
+  $('forgotBtn').hidden = m === 'up' || (m === 'newpw' && !started);
+  if (m === 'newpw') $('forgotBtn').textContent = 'Отмена';
+  $('password').autocomplete = m === 'in' ? 'current-password' : 'new-password';
+  msg('');
+}
+
+function showLogin(text, isErr) {
   $('shell').hidden = true;
   $('login').hidden = false;
-  if (msg) $('loginMsg').textContent = msg;
+  if (text) msg(text, isErr);
 }
+
+const RU_ERR = {
+  'Invalid login credentials': 'Неверный email или пароль.',
+  'Email not confirmed': 'Email не подтверждён — откройте письмо со ссылкой подтверждения.',
+  'Failed to fetch': 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.',
+  'User already registered': 'Такой email уже зарегистрирован — войдите или восстановите пароль.',
+};
+const ru = e => RU_ERR[e.message] || e.message;
+
+document.querySelectorAll('.authtab').forEach(t => t.addEventListener('click', () => setMode(t.dataset.mode)));
+$('forgotBtn').addEventListener('click', () => {
+  if (mode === 'newpw' && started) { recovering = false; $('login').hidden = true; $('shell').hidden = false; return; }
+  setMode(mode === 'forgot' ? 'in' : 'forgot');
+});
 
 $('loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   const email = $('email').value.trim().toLowerCase();
-  const btn = e.target.querySelector('button');
+  const pw = $('password').value;
+  const pw2 = $('password2').value;
+  const name = $('name').value.trim();
+  if (FIELDS[mode].includes('email') && !/^\S+@\S+\.\S+$/.test(email)) return msg('Введите корректный email.', true);
+  if (FIELDS[mode].includes('password') && pw.length < 8) return msg('Пароль должен быть не короче 8 символов.', true);
+  if (FIELDS[mode].includes('password2') && pw !== pw2) return msg('Пароли не совпадают.', true);
+  const btn = $('authSubmit');
   btn.disabled = true;
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin } });
-  btn.disabled = false;
-  $('loginMsg').textContent = error ? 'Не получилось отправить ссылку: ' + error.message : 'Ссылка отправлена на ' + email + '. Откройте письмо на этом устройстве.';
+  msg('…');
+  try {
+    if (mode === 'in') {
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if (error) throw error;
+      msg('');
+    } else if (mode === 'up') {
+      const { data, error } = await sb.auth.signUp({ email, password: pw, options: { data: { name }, emailRedirectTo: location.origin } });
+      if (error) throw error;
+      if (!data.session) msg('Аккаунт создан. Подтвердите email по ссылке из письма, затем войдите.');
+    } else if (mode === 'forgot') {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+      if (error) throw error;
+      msg('Если такой аккаунт есть, ссылка для сброса пароля отправлена на ' + email + '.');
+    } else if (mode === 'newpw') {
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if (error) throw error;
+      msg('Пароль обновлён.');
+      recovering = false;
+      const { data } = await sb.auth.getSession();
+      if (started) { $('login').hidden = true; $('shell').hidden = false; }
+      else if (data.session) start(data.session);
+    }
+  } catch (err) {
+    msg(ru(err), true);
+  } finally {
+    btn.disabled = false;
+  }
 });
+
+setMode('in');
 
 async function start(session) {
   if (started) return;
   const email = (session.user.email || '').toLowerCase();
   const { data: member, error } = await sb.from('shtab_members').select('role,name').eq('email', email).maybeSingle();
   if (error || !member) {
-    showLogin('У ' + email + ' нет доступа к Штабу. Попросите владельца добавить вас.');
+    showLogin('Вы вошли как ' + email + ', но доступа к Штабу пока нет. Попросите владельца открыть доступ для этого email.', true);
     await sb.auth.signOut();
     return;
   }
@@ -55,13 +126,21 @@ async function start(session) {
   if (foot) {
     const bar = document.createElement('div');
     bar.className = 'userbar';
-    bar.innerHTML = `<span></span><button class="btn ghost" type="button">Выйти</button>`;
+    bar.innerHTML = `<span></span><button class="btn ghost" type="button" data-u="pw">Сменить пароль</button><button class="btn ghost" type="button" data-u="out">Выйти</button>`;
     bar.querySelector('span').textContent = member.name || email;
-    bar.querySelector('button').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+    bar.querySelector('[data-u=out]').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+    bar.querySelector('[data-u=pw]').addEventListener('click', () => { recovering = true; setMode('newpw'); showLogin(); });
     foot.after(bar);
   }
   await import('./app.js');
 }
 
-sb.auth.getSession().then(({ data }) => { if (data.session) start(data.session); else showLogin(); });
-sb.auth.onAuthStateChange((evt, session) => { if (session && !started) start(session); });
+let recovering = false;
+sb.auth.onAuthStateChange((evt, session) => {
+  if (evt === 'PASSWORD_RECOVERY') { recovering = true; setMode('newpw'); showLogin('Задайте новый пароль.'); return; }
+  if (session && !started && !recovering) start(session);
+});
+sb.auth.getSession().then(({ data }) => {
+  if (recovering) return;
+  if (data.session) start(data.session); else showLogin();
+});
