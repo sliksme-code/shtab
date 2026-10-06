@@ -156,7 +156,7 @@ function render(){
   pending=false;
   document.getElementById('nav').innerHTML = ROUTES.map(([k,n],i)=>
     (k==='sellerator'?'<div class="navsep">Направления</div>':'')+(k==='life'?'<div class="navsep">Жизнь</div>':'')+(k==='sources'?'<div class="navsep">Система</div>':'')+
-    `<a href="#${k}" ${UI.route===k?'aria-current="page"':''}><span class="dot" style="background:${['overview','plan','rhythm','sources'].includes(k)?'var(--ink)':dc(k==='finplan'?'life':k)}"></span>${n}</a>`).join('');
+    `<a href="#${k}" ${UI.route===k?'aria-current="page"':''}><span class="dot" style="background:${['overview','plan','rhythm','sources'].includes(k)?'var(--page-muted)':dc(k==='finplan'?'life':k)}"></span>${n}</a>`).join('');
   document.getElementById('dbstatus').textContent = S.dbState==='on' ? 'База подключена · изменения сохраняются' : S.dbState==='off' ? 'База недоступна в этом просмотре' : 'Подключаю базу…';
   const v = {overview:vOverview, rhythm:vRhythm, plan:vPlan, sellerator:()=>vDir('sellerator'), agency:()=>vDir('agency'), courses:()=>vDir('courses'), life:vLife, finplan:vFin, sources:vSources}[UI.route] || vOverview;
   document.getElementById('main').innerHTML = v();
