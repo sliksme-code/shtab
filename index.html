@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Штаб</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<div id="login" class="login" hidden>
+  <form class="box" id="loginForm">
+    <div class="brand">Штаб<small>стратегический офис</small></div>
+    <label for="email" class="sub">Рабочий email — пришлём ссылку для входа</label>
+    <input id="email" type="email" required autocomplete="email" placeholder="you@company.ru">
+    <button class="btn primary" type="submit">Получить ссылку</button>
+    <div id="loginMsg" class="sub"></div>
+  </form>
+</div>
+<div id="shell" hidden>
+<div class="app">
+  <nav class="side" aria-label="Разделы">
+    <div class="brand">Штаб<small>стратегический офис</small></div>
+    <div class="navlist" id="nav"></div>
+    <div class="foot" id="dbstatus">Подключаю базу…</div>
+  </nav>
+  <main id="main"></main>
+</div>
+<div id="modalroot"></div>
+
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
