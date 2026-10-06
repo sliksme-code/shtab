@@ -22,6 +22,7 @@ language sql stable security definer set search_path = public as $$
   select role from public.shtab_members where email = lower(coalesce(auth.jwt() ->> 'email',''))
 $$;
 revoke all on function public.shtab_role() from public;
+revoke execute on function public.shtab_role() from anon;
 grant execute on function public.shtab_role() to authenticated;
 
 create or replace function public.shtab_can(c text) returns boolean
@@ -32,6 +33,7 @@ language sql stable security definer set search_path = public as $$
   end
 $$;
 revoke all on function public.shtab_can(text) from public;
+revoke execute on function public.shtab_can(text) from anon;
 grant execute on function public.shtab_can(text) to authenticated;
 
 create or replace function public.shtab_touch() returns trigger
