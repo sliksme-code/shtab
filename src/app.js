@@ -26,7 +26,8 @@ const WD = ['вс','пн','вт','ср','чт','пт','сб'];
 const dc = k => `var(--c-${k in ALLDIR && k!=='all' ? k : 'sellerator'})`;
 
 // ---------- состояние ----------
-const S = {dirs:{}, goals:[], tasks:[], weeks:[], decisions:[], assistants:[], life:null, entries:[], budget:{}, lgoals:[], assets:[], snaps:[], team:null, sources:[], srcCfg:null, dbState:'wait', owner:null};
+const NS_DEFAULT = {title:'Продажа Sellerator банку в 2030 году', valuation:'не дешевле 1 млрд ₽', path:[{date:'2026-12-31',label:'2026',clients:17,check:20000},{date:'2027-12-31',label:'2027',clients:80,check:45000},{date:'2028-12-31',label:'2028',clients:150,check:70000},{date:'2029-12-31',label:'2029',clients:230,check:90000},{date:'2030-06-30',label:'сделка',clients:260,check:100000}]};
+const S = {ns:null, dirs:{}, goals:[], tasks:[], weeks:[], decisions:[], assistants:[], life:null, entries:[], budget:{}, lgoals:[], assets:[], snaps:[], team:null, sources:[], srcCfg:null, dbState:'wait', owner:null};
 const UI = load() || {route:'overview', hz:'week', cur:null, dir:'all', month:null};
 UI.route = (location.hash||'').slice(1) || UI.route || 'overview';
 if(!ROUTES.some(r=>r[0]===UI.route)) UI.route='overview';
@@ -133,6 +134,7 @@ async function boot(){
   sub(db.collection('dirs'), s=>{ S.dirs={}; docs(s).forEach(x=>S.dirs[x.id]=x); render() });
   sub(db.collection('goals'), s=>{ S.goals=docs(s); render() });
   sub(db.collection('tasks'), s=>{ S.tasks=docs(s); render() });
+  sub(db.doc('settings/northstar'), s=>{ S.ns = s.exists ? s.data() : null; render() });
   sub(db.doc('settings/team'), s=>{ S.team = s.exists ? s.data() : null; render() });
   sub(db.collection('sources'), s=>{ S.sources=docs(s); render() });
   sub(db.doc('settings/sources'), s=>{ S.srcCfg = s.exists ? s.data() : null; render() });
@@ -191,6 +193,26 @@ function dirMetrics(k, compact){
 }
 
 // ---------- ПУЛЬТ ----------
+function nsCard(sel, lowR, highR, L){
+  const ns = {...NS_DEFAULT, ...(S.ns||{})};
+  const path = (Array.isArray(ns.path)&&ns.path.length?ns.path:NS_DEFAULT.path).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const now = sel.d.clients, t = today();
+  const next = path.find(p=>parse(p.date)>=t) || path.at(-1);
+  const prevIdx = path.indexOf(next)-1, prev = prevIdx>=0 ? path.at(prevIdx) : null;
+  const goal = path.at(-1);
+  const weeks = Math.max(1,(parse(next.date)-t)/(7*864e5));
+  const need = isNum(now) ? next.clients-now : null;
+  const steps = path.map(p=>{ const reached = isNum(now)&&now>=p.clients, cur = p===next;
+    return `<div class="ns-step${reached?' ok':''}${cur?' cur':''}"><b>${num(p.clients)}</b><span>${esc(p.label||p.date.slice(0,4))}</span></div>` }).join('');
+  return `<div class="card ns"><div class="label">Северная звезда · бизнес</div>
+      <div class="big">${esc(ns.title)}, ${esc(ns.valuation)}</div>
+      <div class="ns-metric"><span class="ns-num">${isNum(now)?num(now):'—'}</span><span class="sub">платящих клиентов сейчас · к сделке ${num(goal.clients)} по ≈${rubS(goal.check)}</span></div>
+      ${bar(frac(now,next.clients),'sellerator')}
+      <div class="sub" style="margin-top:6px">Следующая ступень — ${num(next.clients)} к ${fmtDate(next.date)}${need!=null&&need>0?` · нужно +${num(need)}, ≈${(need/weeks).toLocaleString('ru-RU',{maximumFractionDigits:1})} в неделю`:need!=null?' · выполнено':''}</div>
+      <div class="ns-path">${steps}</div>
+      ${lowR!=null?`<div class="sub" style="margin-top:8px">Ваша доля ${pct(L.exitShare)} ≈ ${rubS(lowR)} – ${rubS(highR)}</div>`:''}
+    </div>`;
+}
 function vOverview(){
   const L = S.life || {};
   const sel = dirCalc('sellerator');
@@ -209,11 +231,7 @@ function vOverview(){
   <span class="status">${cap(plabel('day',today()))}</span></div>
   <div class="stack">
    <section class="north">
-    <div class="card"><div class="label">Северная звезда · бизнес</div>
-      <div class="big">Продажа Sellerator за ${isNum(L.exitLow)&&isNum(L.exitHigh)?(L.exitLow/1e6).toLocaleString('ru-RU')+'–'+(L.exitHigh/1e6).toLocaleString('ru-RU'):'10–15'} млн $</div>
-      <div class="sub">${lowR!=null?`Ваша доля ${pct(L.exitShare)} ≈ ${rubS(lowR)} – ${rubS(highR)}`:'Доля основателя 75%'}</div>
-      <div class="sub" style="margin-top:8px">Сейчас ${rubS(sel.revenue)} MRR · нужно 15–37 млн ₽ MRR к сделке</div>
-    </div>
+    ${nsCard(sel, lowR, highR, L)}
     <div class="card"><div class="label">Северная звезда · жизнь</div>
       ${L.vision?`<div class="vision">${esc(L.vision)}</div>`:`<div class="vision" style="opacity:.75">Опишите, ради чего всё это: образ жизни, капитал, семья, сроки. Эта цель задаёт планку личного дохода и сбережений.</div>`}
       ${lifeVisible?`<div class="row" style="margin-top:10px"><button class="btn" data-act="editLife" style="background:transparent;color:inherit;border-color:currentColor">Изменить</button></div>`:''}
