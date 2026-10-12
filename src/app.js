@@ -685,6 +685,29 @@ function finCalc(){
 }
 function addMonths(n){ const d=today(); d.setMonth(d.getMonth()+n); return `${MONTHS[d.getMonth()]} ${d.getFullYear()}` }
 
+function finLifestyle(L){
+  const rows = Array.isArray(L.lifestyle) ? L.lifestyle : [];
+  if(!rows.length) return '';
+  const tot = rows.reduce((a,r)=>a+(r.amount||0),0);
+  return `<section class="sec"><div class="sec-h"><h2>Образ жизни 2030</h2><span class="sub num">≈${rubS(tot)} в месяц в ценах 2026</span></div>
+   ${L.lifestyleNote?`<p class="sub" style="margin:0 0 8px">${esc(L.lifestyleNote)}</p>`:''}
+   <div class="tablewrap"><table><thead><tr><th>Статья</th><th class="n">В месяц</th><th>Комментарий</th></tr></thead><tbody>
+   ${rows.map(r=>`<tr><td>${esc(r.item)}</td><td class="n">${rub(r.amount)}</td><td class="sub">${esc(r.note||'')}</td></tr>`).join('')}
+   <tr><td><b>Итого</b></td><td class="n"><b>${rub(tot)}</b></td><td></td></tr></tbody></table></div></section>`;
+}
+function finScenarios(L){
+  const sc = Array.isArray(L.scenarios) ? L.scenarios : [];
+  if(!sc.length) return '';
+  return `<section class="sec"><div class="sec-h"><h2>Два сценария</h2>${L.scenariosUpdated?`<span class="sub">расчёт от ${fmtDate(L.scenariosUpdated)}</span>`:''}</div>
+   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+   ${sc.map(x=>`<div class="card"><div class="label">${esc(x.name)}</div><div class="big" style="font-size:18px">${esc(x.headline||'')}</div>
+     <div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>Период</th><th class="n">Доход</th><th class="n">Расходы</th><th class="n">Остаётся</th><th>Куда</th></tr></thead><tbody>
+     ${(x.rows||[]).map(r=>`<tr><td style="white-space:nowrap">${esc(r.period)}</td><td class="n">${rubS(r.income)}</td><td class="n">${rubS(r.expense)}</td><td class="n">${isNum(r.income)&&isNum(r.expense)?rubS(r.income-r.expense):'—'}</td><td class="sub">${esc(r.note||'')}</td></tr>`).join('')}
+     </tbody></table></div>
+     ${(x.points||[]).length?`<ul class="sub" style="margin:10px 0 0;padding-left:18px">${x.points.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}
+   </div>`).join('')}
+   </div></section>`;
+}
 function vFin(){
   if(S.owner===false) return `<div class="head"><div><h1>Финплан</h1></div></div>${emptyBox('Этот раздел виден только владельцу офиса.')}`;
   const c = finCalc(), L = c.L;
@@ -710,6 +733,8 @@ function vFin(){
      ${tile('Платежи по долгам', rubS(c.payments), c.assets>0?`долги к активам ${pct(c.liabs/c.assets)}`:'в месяц', null, 'life')}
    </section>
    ${goalTxt?`<div class="warnbox" style="border-color:${dc('life')}">${goalTxt}</div>`:`<div class="warnbox">Цель по пассивному доходу не задана. Нажмите «Цель и параметры»: сумма в месяц, срок и доходность капитала — от них считается нужный капитал и ежемесячный взнос.</div>`}
+   ${finLifestyle(L)}
+   ${finScenarios(L)}
    ${L.fpNote?`<div class="card"><div class="label">Стратегия</div><div class="vision">${esc(L.fpNote)}</div></div>`:''}
 
    <section class="sec"><div class="sec-h"><h2>Инвестиции по классам</h2><span class="sub">«Капитал для цели» — только активы с отметкой «учитывать»</span></div>
